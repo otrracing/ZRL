@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirect</title>
+</head>
+<body>
+    <script> 
+        async function getRedirects() {
+            // Replace 'your_spreadsheet_id' with your actual Google Sheet ID
+            const sheetUrl = 'https://docs.google.com/spreadsheets/d/1AhA8SRi7DF3Y9gI8_2gS5C5794nQZLwYni-_etBH-2A/gviz/tq?tqx=out:json';
+            
+            try {
+                // Fetch the data from the published Google Sheet
+                const response = await fetch(sheetUrl);
+                const text = await response.text();
+                
+                // Remove the prefix and suffix added by Google Sheets API to get valid JSON
+                const jsonData = JSON.parse(text.substring(47).slice(0, -2));
+
+                console.log('Raw Data:', jsonData.table.rows);
+                
+                // Map the data into an array of objects
+                const data = jsonData.table.rows.map(row => ({
+                    form: row.c[0] ? row.c[0].v.toLowerCase() : '',
+                    rider: (row.c[1] && row.c[1].v !== '' && row.c[1].v !== 0) ? String(row.c[1].v).toLowerCase() : '',
+                    team: row.c[2] ? row.c[2].v.toLowerCase() : '',
+                    url: row.c[3] ? row.c[3].v : ''
+                }));
+
+                console.log('Fetched Data:', data);
+                
+                return data;
+            } catch (error) {
+                console.error('Error fetching Google Sheet:', error);
+                return [];
+            }
+        }
+
+        function redirectToForm(data, form, rider, team) {
+            // Convert parameters to lowercase for case-insensitive comparison
+            form = form ? form.toLowerCase() : '';
+            rider = rider ? String(rider).toLowerCase() : '';
+            team = team ? team.toLowerCase() : '';
+
+            // Find the URL based on form, rider, and team
+            let redirect;
+            
+            // Check for matches in order of specificity
+            if (rider && team) {
+                //Match on form + rider + team
+                redirect = data.find(item => item.form === form && item.rider === rider && item.team === team);
+            }
+            if (!redirect && rider) {
+                // Match on form and rider
+                redirect = data.find(item => item.form === form && item.rider === rider);
+            }
+            if (!redirect && team) {
+                // Match on form and team if rider didn't match
+                redirect = data.find(item => item.form === form && !item.rider && item.team === team);
+            }
+            if (!redirect) {
+                // Fallback to match on form only
+                redirect = data.find(item => item.form === form && !item.rider && !item.team);
+            }
+            
+            if (redirect) {
+                // Redirect to the URL
+                window.location.href = redirect.url;
+            } else {
+                // Display an error message if the combination is not found
+                document.body.innerHTML = '<h1>404: Form not found</h1>';
+            }
+        }
+
+        (async function() {
+            // Get the URL parameters 'form', 'rider', and 'team'
+            const urlParams = new URLSearchParams(window.location.search);
+            const form = urlParams.get('form');
+            const rider = urlParams.get('rider');
+            const team = urlParams.get('team');
+            
+            if (form) {
+                // Fetch the redirects data from the Google Sheet
+                const redirects = await getRedirects();
+                
+                // Perform the redirection based on the form, rider, and team parameters
+                redirectToForm(redirects, form, rider, team);
+            } else {
+                // Display an error message if the form parameter is missing
+                document.body.innerHTML = `
+                    <h1>Welcome to OTR-ZRL!</h1>
+                    <p>To access the correct form, please use the following URL format:</p>
+                    <p><strong>https://tinyurl.com/OTR-ZRL/?form=[form]&rider=[riderid]&team=[teamname]</strong></p>
+                    <p><strong>Examples:</strong></p>
+                    <ul>
+                        <li><strong>With Rider ID:</strong> <code>https://tinyurl.com/OTR-ZRL/?form=form1&rider=12345</code></li>
+                        <li><strong>With Team Name:</strong> <code>https://tinyurl.com/OTR-ZRL/?form=form2&team=TeamA</code></li>
+                        <li><strong>Without Rider ID or Team Name:</strong> <code>https://tinyurl.com/OTR-ZRL/?form=form3</code></li>
+                    </ul>
+                    <p>Please replace <code>[form]</code>, <code>[riderid]</code>, and <code>[teamname]</code> with the appropriate values.</p>
+                `;
+            }
+        })();
+    </script>
+</body>
+</html>
