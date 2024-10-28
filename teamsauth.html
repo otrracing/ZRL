@@ -32,20 +32,18 @@
     </table>
 
     <script>
-        const webAppUrl = "https://script.google.com/macros/s/AKfycbzieTHdH-3hm21WifO2XkF1RvM76H2VFO2xO9lk8WLER8uMWdA4oSQv_7tYtL1ac1br/exec"; // Replace with your Apps Script web app URL
+        const baseWebAppUrl = "https://script.google.com/macros/s/AKfycbzieTHdH-3hm21WifO2XkF1RvM76H2VFO2xO9lk8WLER8uMWdA4oSQv_7tYtL1ac1br/exec";
 
         function login() {
             const email = document.getElementById("email").value;
             const riderId = document.getElementById("riderId").value;
 
-            // Check if email and riderId are entered
             if (!email || !riderId) {
                 alert("Please enter both email and rider ID.");
                 return;
             }
 
-            // Send credentials to Apps Script for validation
-            fetch(webAppUrl, {
+            fetch(baseWebAppUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: `email=${encodeURIComponent(email)}&riderId=${encodeURIComponent(riderId)}`
@@ -53,10 +51,9 @@
             .then(response => response.json())
             .then(data => {
                 if (data.isValid) {
-                    // If valid, save in localStorage and display user info
-                    localStorage.setItem("riderEmail", email);
+                    sessionStorage.setItem("riderEmail", email);
                     displayUser(email);
-                    fetchTeams(); // Fetch data if the user is verified
+                    fetchTeams();
                 } else {
                     alert("Invalid email or rider ID. Please try again.");
                 }
@@ -65,7 +62,7 @@
         }
 
         function logout() {
-            localStorage.removeItem("riderEmail");
+            sessionStorage.removeItem("riderEmail");
             location.reload();
         }
 
@@ -76,36 +73,40 @@
         }
 
         function checkLogin() {
-            const email = localStorage.getItem("riderEmail");
+            const email = sessionStorage.getItem("riderEmail");
             if (email) {
                 displayUser(email);
-                fetchTeams(); // Fetch data if the user is "logged in"
+                fetchTeams();
             }
         }
 
         async function fetchTeams() {
-            const url = "https://script.google.com/macros/s/AKfycbzieTHdH-3hm21WifO2XkF1RvM76H2VFO2xO9lk8WLER8uMWdA4oSQv_7tYtL1ac1br/exec?type=teams"; // Replace with your data URL
-
+            const url = `${baseWebAppUrl}?type=teams`;
             try {
                 console.log("Fetching teams...");
                 const response = await fetch(url);
+                if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
                 const data = await response.json();
-                console.log("Fetched team data:", data);
 
                 const tableBody = document.querySelector("#teamsTable tbody");
-                tableBody.innerHTML = ""; // Clear table before adding new rows
+                tableBody.innerHTML = "";
 
-                data.forEach((row) => {
-                    const rowElement = document.createElement("tr");
-                    rowElement.innerHTML = `<td>${row.teamName}</td><td>${row.otherInfo}</td>`;
-                    tableBody.appendChild(rowElement);
-                });
+                if (data && data.length) {
+                    data.forEach((row) => {
+                        const rowElement = document.createElement("tr");
+                        rowElement.innerHTML = `<td>${row.teamName}</td><td>${row.otherInfo}</td>`;
+                        tableBody.appendChild(rowElement);
+                    });
+                } else {
+                    tableBody.innerHTML = "<tr><td colspan='2'>No teams available</td></tr>";
+                }
             } catch (error) {
                 console.error("Error fetching team data:", error);
+                alert("Failed to load teams. Please try again later.");
             }
         }
 
-        checkLogin(); // Check if the user is already logged in on page load
+        document.addEventListener("DOMContentLoaded", checkLogin);
     </script>
 </body>
 </html>
