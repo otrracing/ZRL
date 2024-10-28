@@ -87,9 +87,13 @@
             const url = "https://script.google.com/macros/s/AKfycbzieTHdH-3hm21WifO2XkF1RvM76H2VFO2xO9lk8WLER8uMWdA4oSQv_7tYtL1ac1br/exec?type=teams"; // Replace with your data URL
 
             try {
+                console.log("Fetching teams...");
                 const response = await fetch(url);
                 const data = await response.json();
+                console.log("Fetched team data:", data);
+
                 const tableBody = document.querySelector("#teamsTable tbody");
+                tableBody.innerHTML = ""; // Clear table before adding new rows
 
                 data.forEach((row) => {
                     const rowElement = document.createElement("tr");
@@ -97,7 +101,7 @@
                     tableBody.appendChild(rowElement);
                 });
             } catch (error) {
-                console.error("Error fetching data:", error);
+                console.error("Error fetching team data:", error);
             }
         }
 
