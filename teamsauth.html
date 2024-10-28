@@ -7,6 +7,8 @@
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background-color: #f2f2f2; }
     </style>
+    <!-- Load Google Charts Library -->
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 </head>
 <body>
     <h2>Teams List</h2>
@@ -36,6 +38,10 @@
 
     <script>
         const baseWebAppUrl = "https://script.google.com/macros/s/AKfycbzieTHdH-3hm21WifO2XkF1RvM76H2VFO2xO9lk8WLER8uMWdA4oSQv_7tYtL1ac1br/exec";
+
+        // Load the Google Charts library and set callback for pie chart drawing
+        google.charts.load("current", { packages: ["corechart"] });
+        google.charts.setOnLoadCallback(checkLogin);
 
         function login() {
             const email = document.getElementById("email").value;
@@ -138,8 +144,6 @@
             const chart = new google.visualization.PieChart(document.getElementById("piechart"));
             chart.draw(chartData, options);
         }
-
-        document.addEventListener("DOMContentLoaded", checkLogin);
     </script>
 </body>
 </html>
