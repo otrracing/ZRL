@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OTR ZRL 2024/25</title>
+    <style>
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+    <!-- Load Google Charts Library -->
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+</head>
+<body>
+    <h2>Round 2 Riders</h2>
+
+    <!-- Login Area -->
+    <div id="login-area">
+        <input type="email" id="email" placeholder="Enter your email" required />
+        <input type="text" id="riderId" placeholder="Enter your rider ID" required />
+        <button onclick="login()">Sign In</button>
+    </div>
+
+    <!-- User Info and Logout -->
+    <div id="user-info" style="display:none;">
+        <span>Signed in as: <span id="user-name"></span></span>
+        <button onclick="logout()">Sign Out</button>
+    </div>
+
+    <!-- Filter Input -->
+    <label for="filter-input">Filter Riders:</label>
+    <input type="text" id="filter-input" placeholder="Type to filter riders" onkeyup="filterRiders()">
+
+    <label for="team-filter-input">Filter Teams:</label>
+    <input type="text" id="team-filter-input" placeholder="Type to filter teams" onkeyup="filterRiders()">
+
+    <!-- Table for Rider Data -->
+    <table id="ridersTable">
+        <thead>
+            <tr>
+                <th>Rider ID</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Preferred League</th>
+                <th>Alternate League</th>
+                <th>First Team</th>
+                <th>Second Team</th>
+                <th>Race 1</th>
+                <th>Race 2</th>
+                <th>Race 3</th>
+                <th>Race 4</th>
+                <th>Race 5</th>
+                <th>Race 6</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <!-- Pie Chart for Rider Distribution -->
+    <h2>Rider Distribution by Preferred League</h2>
+    <div id="piechart" style="width: 900px; height: 500px;"></div>
+
+    <script>
+        const baseWebAppUrl = "https://script.google.com/macros/s/AKfycbzNnne8ELkhsXdKO0KW48v6ApYK5Yuml7XcTvOHavJmgolHiLWUtcrSkCM3e_yqa5Jg/exec"; // Replace with your Apps Script URL
+
+        // Load the Google Charts library and set callback for pie chart drawing
+        google.charts.load("current", { packages: ["corechart"] });
+        google.charts.setOnLoadCallback(checkLogin);
+
+        function login() {
+            const email = document.getElementById("email").value;
+            const riderId = document.getElementById("riderId").value;
+
+            if (!email || !riderId) {
+                alert("Please enter both email and rider ID.");
+                return;
+            }
+
+            fetch(baseWebAppUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: `email=${encodeURIComponent(email)}&riderId=${encodeURIComponent(riderId)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.isValid) {
+                    sessionStorage.setItem("riderEmail", email);
+                    displayUser(email);
+                    fetchRiders(); // Corrected to fetchRiders
+                } else {
+                    alert("Invalid email or rider ID. Please try again.");
+                }
+            })
+            .catch(error => console.error("Error during login:", error));
+        }
+
+        function logout() {
+            sessionStorage.removeItem("riderEmail");
+            location.reload();
+        }
+
+        function displayUser(email) {
+            document.getElementById("login-area").style.display = "none";
+            document.getElementById("user-info").style.display = "block";
+            document.getElementById("user-name").innerText = email;
+        }
+
+        function checkLogin() {
+            const email = sessionStorage.getItem("riderEmail");
+            if (email) {
+                displayUser(email);
+                fetchRiders(); // Corrected to fetchRiders
+            }
+        }
+
+        // Fetch Rider Data from Google Apps Script
+        async function fetchRiders() {
+            const url = `${baseWebAppUrl}?type=riders`;
+            try {
+                console.log("Fetching riders...");
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
+                const data = await response.json();
+
+                populateRiderTable(data);
+                drawChart(data);
+            } catch (error) {
+                console.error("Error fetching rider data:", error);
+                alert("Failed to load riders. Please try again later.");
+            }
+        }
+
+        // Populate HTML Table with Rider Data
+        function populateRiderTable(data) {
+            const tableBody = document.querySelector("#ridersTable tbody");
+            tableBody.innerHTML = "";
+
+            data.forEach((row) => {
+                const rowElement = document.createElement("tr");
+                rowElement.innerHTML = `
+                    <td>${row.riderId}</td>
+                    <td>${row.name}</td>
+                    <td>${row.category}</td>
+                    <td>${row.prefLeague}</td>
+                    <td>${row.altLeague}</td>
+                    <td>${row.firstTeam}</td>
+                    <td>${row.secondTeam}</td>
+                    <td>${row.race1}</td>
+                    <td>${row.race2}</td>
+                    <td>${row.race3}</td>
+                    <td>${row.race4}</td>
+                    <td>${row.race5}</td>
+                    <td>${row.race6}</td>
+                `;
+                tableBody.appendChild(rowElement);
+            });
+        }
+
+        // Draw Pie Chart with Distribution of Riders by Preferred League
+        function drawChart(data) {
+            const counts = {};
+
+            // Count occurrences of each value in "Preferred League"
+            data.forEach(row => {
+                const league = row.prefLeague;
+                counts[league] = (counts[league] || 0) + 1;
+            });
+
+            // Prepare data for Google Charts
+            const chartData = new google.visualization.DataTable();
+            chartData.addColumn("string", "Preferred League");
+            chartData.addColumn("number", "Count");
+
+            // Add rows from counts object
+            for (const [league, count] of Object.entries(counts)) {
+                chartData.addRow([league, count]);
+            }
+
+            const options = {
+                title: "Rider Distribution by Preferred League",
+                pieHole: 0.4, // Set to 0 for a full pie chart, or >0 for a donut chart
+            };
+
+            const chart = new google.visualization.PieChart(document.getElementById("piechart"));
+            chart.draw(chartData, options);
+        }
+
+        // Filter Function for the Rider Table
+        function filterRiders() {
+            const nameInput = document.getElementById("filter-input").value.toLowerCase();
+            const teamInput = document.getElementById("team-filter-input").value.toLowerCase();
+            const rows = document.querySelectorAll("#ridersTable tbody tr");
+
+            rows.forEach(row => {
+                const riderId = row.cells[0].textContent;
+                const name = row.cells[1].textContent.toLowerCase();
+                const category = row.cells[2].textContent.toLowerCase();
+                const prefLeague = row.cells[3].textContent.toLowerCase();
+                const altLeague = row.cells[4].textContent.toLowerCase();
+                const firstTeam = row.cells[5].textContent.toLowerCase();
+                const secondTeam = row.cells[6].textContent.toLowerCase();
+
+                // Check if the row matches any of the filter inputs
+                const matchesName = riderId.includes(nameInput) || name.includes(nameInput) || category.includes(nameInput) || prefLeague.includes(nameInput) || altLeague.includes(nameInput);
+                const matchesTeam = firstTeam.includes(teamInput) || secondTeam.includes(teamInput);
+
+                if (matchesName && matchesTeam) {
+                    row.style.display = ""; // Show row if it matches both filters
+                } else {
+                    row.style.display = "none"; // Hide row if it doesn't match
+                }
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", checkLogin);
+    </script>
+</body>
+</html>
