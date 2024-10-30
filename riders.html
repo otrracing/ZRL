@@ -12,9 +12,23 @@
 
         /* Sign-in link in top-right */
         #login-area, #user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
             position: absolute;
             top: 10px;
             right: 10px;
+        }
+
+         /* Adjust styling for email and rider ID inputs */
+        #login-area input[type="email"],
+        #login-area input[type="text"] {
+            margin-right: 5px;
+        }
+
+        /* Ensure "Signed in as" text doesn't overlap with the button */
+        #user-info {
+            display: none;
         }
 
         /* Table styling */
@@ -195,7 +209,7 @@
 
         function displayUser(email) {
             document.getElementById("login-area").style.display = "none";
-            document.getElementById("user-info").style.display = "block";
+            document.getElementById("user-info").style.display = "flex";
             document.getElementById("user-name").innerText = email;
         }
 
